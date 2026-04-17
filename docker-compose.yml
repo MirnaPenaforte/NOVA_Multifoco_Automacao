@@ -1,0 +1,29 @@
+services:
+  nova-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: nova-app:02
+    container_name: nova-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=America/Sao_Paulo
+    volumes:
+      - ./output:/app/output
+      - ./imports:/app/imports
+      - ./logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Adicionando um healthcheck simples para verificar se o processo está rodando
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "main.py"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
