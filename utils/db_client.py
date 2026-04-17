@@ -103,17 +103,34 @@ def buscar_dados_views():
 
 
 if __name__ == "__main__":
-    # Diagnóstico: lista as views disponíveis no banco
-    print("🔍 Diagnóstico: Listando views disponíveis no banco...")
+    # Carrega as variáveis para saber quais views investigar
+    view_vendas = os.getenv("VIEW_VENDAS", "dbo.VW_MULTFOCO_VENDAS")
+    view_estoque = os.getenv("VIEW_ESTOQUE", "dbo.VW_MULTFOCO_ESTOQUE")
+
+    print(f"🔍 Diagnóstico: Investigando as views...")
     try:
         engine = get_engine()
         with engine.connect() as conn:
-            result = pd.read_sql(text(
-                "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.VIEWS ORDER BY TABLE_SCHEMA, TABLE_NAME"
-            ), conn)
-            print(f"\n📋 Views encontradas ({len(result)}):")
-            for _, row in result.iterrows():
-                print(f"   → {row['TABLE_SCHEMA']}.{row['TABLE_NAME']}")
+            for view in [view_vendas, view_estoque]:
+                if not view: continue
+                
+                # Extrai apenas o nome da tabela (remove schema se houver)
+                table_name = view.split('.')[-1]
+                
+                print(f"\n📊 Estrutura da View: {view}")
+                query_cols = text(f"""
+                    SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_NAME = '{table_name}'
+                    ORDER BY ORDINAL_POSITION
+                """)
+                cols = pd.read_sql(query_cols, conn)
+                if cols.empty:
+                    print(f"   ⚠️ Nenhuma coluna encontrada para {table_name}. Verifique o nome.")
+                else:
+                    for i, row in cols.iterrows():
+                        print(f"   [{i}] {row['COLUMN_NAME']} ({row['DATA_TYPE']}) - Nullable: {row['IS_NULLABLE']}")
+
         engine.dispose()
     except Exception as e:
-        print(f"Erro no diagnóstico: {e}")
+        print(f"❌ Erro no diagnóstico: {e}")
