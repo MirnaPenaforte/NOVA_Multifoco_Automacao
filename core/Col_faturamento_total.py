@@ -8,10 +8,10 @@ def calcular_faturamento_atual(df_vendas):
     Gera as colunas 'Faturamento Atual' e 'Faturamento M-1'.
     """
     INDICE_CFOP = 0      # Coluna 1
-    INDICE_DATA = 2
-    INDICE_QTD = 5       # Coluna 6
-    INDICE_PRECO_UN = 6  # Coluna 7
-    INDICE_EAN = 7       # Coluna 8
+    INDICE_DATA = 1
+    INDICE_QTD = 4       # Coluna 5
+    INDICE_PRECO_UN = 5  # Coluna 6
+    INDICE_EAN = 6       # Coluna 7
 
     try:
         # 0. Filtrar CFOPs indesejados

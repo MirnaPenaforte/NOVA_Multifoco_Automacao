@@ -4,14 +4,14 @@ from dateutil.relativedelta import relativedelta
 
 def agrupar_vendas(df_vendas):
     """
-    Soma as vendas da Coluna 6 (índice 5) por EAN (índice 7).
+    Soma as vendas da Coluna 5 (índice 4) por EAN (índice 6).
     Força a limpeza de strings para garantir que '5' vire 5 antes da soma.
-    Separa em 'Mês Atual' e 'Mês -1' usando a coluna Data da Venda (índice 2).
+    Separa em 'Mês Atual' e 'Mês -1' usando a coluna Data da Venda (índice 1).
     """
     INDICE_CFOP = 0
-    INDICE_DATA = 2
-    INDICE_VALOR = 5   
-    INDICE_EAN = 7     
+    INDICE_DATA = 1
+    INDICE_VALOR = 4   
+    INDICE_EAN = 6     
 
     try:
         # 0. Filtrar CFOPs indesejados
