@@ -105,19 +105,18 @@ def preencher_data_entrada(df_final):
 def _mapear_lotes(df_estoque):
     """
     Constrói um dicionário EAN -> set(Lotes).
-    Para encontrar se há novos lotes em circulação, usando os índices informados.
-    Índice [1]: EAN
-    Índice [2]: Referência do lote
-    Índice [4]: Estoque em quantidade
+    Para encontrar se há novos lotes em circulação, usando os índices da View.
+    Índice [1]: Codigo_Barras (EAN)
+    Índice [3]: Lote
     """
     mapa = {}
-    if df_estoque.empty or len(df_estoque.columns) <= 2:
+    if df_estoque.empty or len(df_estoque.columns) <= 3:
         return mapa
         
     for index, row in df_estoque.iterrows():
         try:
             ean = str(row[1]).strip()
-            lote = str(row[2]).strip()
+            lote = str(row[3]).strip()
             
             if pd.notna(row[1]) and ean:
                 if ean not in mapa:

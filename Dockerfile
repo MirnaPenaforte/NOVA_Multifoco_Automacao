@@ -10,7 +10,8 @@ WORKDIR /app
 # Primeiro copiamos apenas o requirements para aproveitar o cache de camadas do Docker
 COPY requirements.txt .
 
-# Instala dependências do sistema e o driver ODBC para SQL Server
+# Instala dependências do sistema e os drivers ODBC 17 e 18 para SQL Server
+# O Driver 18 resolve problemas de timeout TLS com servidores SQL Server mais antigos
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gnupg2 \
@@ -21,9 +22,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg \
     && echo "deb [arch=amd64,arm64,armhf signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 msodbcsql18 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Variáveis para garantir que o odbcinst.ini seja encontrado dentro do container
+ENV ODBCSYSINI=/etc
+ENV ODBCINI=/etc/odbc.ini
 
 # Copia e instala as dependências Python
 COPY requirements.txt .

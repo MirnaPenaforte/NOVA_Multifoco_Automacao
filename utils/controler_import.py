@@ -13,7 +13,7 @@ def arquivar_arquivos_importacao(diretorio_imports='imports'):
     """
     Cria uma rotina de backup de arquivos CSV diários.
     Agrupa por 'Mês/Dia', guardando os arquivos originais.
-    Limpa backups que tenham mais de um mês (exclui os mais antigos que 30 dias guardados).
+    Limpa backups que tenham mais de dois meses (mantém aproximadamente 60-90 dias).
     """
     try:
         hoje = datetime.now()
@@ -57,7 +57,7 @@ def arquivar_arquivos_importacao(diretorio_imports='imports'):
 def limpar_backups_antigos(dir_backups, data_atual):
     """
     Remove as pastas de meses de backup que são muito antigas.
-    Mantém o mês atual e o mês anterior ao atual. Exclui o resto para manter apenas o tempo necessário (aprox 30-60 dias).
+    Mantém o mês atual e os dois meses anteriores. Exclui o resto para garantir pelo menos 60 dias de histórico.
     """
     if not os.path.exists(dir_backups):
         return
@@ -77,10 +77,10 @@ def limpar_backups_antigos(dir_backups, data_atual):
                     meses_atuais_total = data_atual.year * 12 + data_atual.month
                     meses_pasta_total = ano_pasta * 12 + mes_pasta
                     
-                    # Se o índice da pasta é menor do que (mês atual - 1), excluímos (arquivos guardados têm mais de ~30 dias)
-                    if meses_atuais_total - meses_pasta_total >= 2:
+                    # Se o índice da pasta é menor do que (mês atual - 2), excluímos (garante pelo menos 60 dias de histórico)
+                    if meses_atuais_total - meses_pasta_total >= 3:
                         shutil.rmtree(caminho_pasta)
-                        print(f"🧹 Backup de mês antigo deletado (substituído): {pasta_mes}")
+                        print(f"🧹 Backup de mês antigo deletado (mantendo últimos 60-90 dias): {pasta_mes}")
                 except Exception as e:
                     print(f"⚠️ Erro ao verificar idade do backup na pasta {pasta_mes}: {e}")
 

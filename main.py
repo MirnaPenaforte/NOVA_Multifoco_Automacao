@@ -11,7 +11,7 @@ from core.Col_data_entrada import preencher_data_entrada
 from utils.exporter_excel import gerar_relatorio_vendas
 from utils.controler_import import arquivar_arquivos_importacao
 from utils.api_client import enviar_ultimo_relatorio
-from utils.db_client import buscar_dados_views
+from utils.db_client import buscar_dados_views, filtrar_vendas_periodo_atual
 from utils.Disparo import iniciar_agendador
 
 def main():
@@ -33,61 +33,37 @@ def main():
         return
 
 
-    # 2. Consolidação de TODOS os Arquivos CSV da pasta /imports
-    # Inclui os arquivos baixados do banco E os que já existiam (ex: _Matriz.csv)
-    print("Consolidando todos os arquivos da pasta /imports...")
+    # 2. Carregamento dos Arquivos Originais baixados do banco
+    print("Carregando arquivos originais baixados do banco...")
     
-    todos_csvs = [
-        os.path.join(diretorio_imports, f) 
-        for f in os.listdir(diretorio_imports) 
-        if f.lower().endswith('.csv')
-    ]
+    venda_bruta_path = next((f for f in arquivos_baixados if 'VENDA' in os.path.basename(f).upper()), None)
+    estoque_path = next((f for f in arquivos_baixados if 'ESTOQUE' in os.path.basename(f).upper()), None)
     
-    vendas_files = [f for f in todos_csvs if 'VENDA' in os.path.basename(f).upper() and 'CONSOLIDADO' not in os.path.basename(f).upper()]
-    estoque_files = [f for f in todos_csvs if 'ESTOQUE' in os.path.basename(f).upper() and 'CONSOLIDADO' not in os.path.basename(f).upper()]
-    
-    print(f"   📄 Arquivos de vendas encontrados: {[os.path.basename(f) for f in vendas_files]}")
-    print(f"   📄 Arquivos de estoque encontrados: {[os.path.basename(f) for f in estoque_files]}")
+    if not venda_bruta_path or not estoque_path:
+        print("❌ Erro: Arquivos de VENDA ou ESTOQUE não encontrados na extração.")
+        return
 
-    def consolidar_dfs(lista_caminhos):
-        dfs = []
-        for path in lista_caminhos:
-            df = ler_csv_sem_header(path)
-            if df is not None:
-                print(f"   📋 {os.path.basename(path)}: {len(df)} linhas, {len(df.columns)} colunas")
-                dfs.append(df)
-        if not dfs:
-            return None
-        # Trunca todas para o número mínimo de colunas antes de concatenar
-        # Evita NaN causado por arquivos com estruturas distintas (ex: Filial=11 cols, Matriz=16 cols)
-        min_cols = min(len(df.columns) for df in dfs)
-        dfs_truncados = [df.iloc[:, :min_cols] for df in dfs]
-        print(f"   ✂️  Truncando para {min_cols} colunas (mínimo entre os arquivos)")
-        return pd.concat(dfs_truncados, ignore_index=True)
+    # 3. Filtrar vendas — manter apenas mês atual e mês anterior
+    #    Gera VENDA_ATUAL_DD-MM-AAAA.csv com datas convertidas para dd/mm/YYYY
+    venda_path = filtrar_vendas_periodo_atual(venda_bruta_path)
+    if not venda_path:
+        print("❌ Erro: Falha ao filtrar vendas por período.")
+        return
 
-    df_vendas_bruto = consolidar_dfs(vendas_files)
-    df_estoque_bruto = consolidar_dfs(estoque_files)
+    # Remover o arquivo bruto de vendas (manter apenas VENDA_ATUAL)
+    try:
+        os.remove(venda_bruta_path)
+        print(f"🗑️  Arquivo bruto removido: {venda_bruta_path}")
+    except OSError:
+        pass
 
-    # --- SALVAR VERSÕES CONSOLIDADAS (Para conferência) ---
-    if df_vendas_bruto is not None:
-        caminho_venda_con = os.path.join(diretorio_imports, 'VENDA_CONSOLIDADO.csv')
-        df_vendas_bruto.to_csv(caminho_venda_con, sep=';', index=False, header=False, encoding='latin-1')
-        print(f"✅ Arquivo de vendas consolidado salvo em: {caminho_venda_con}")
-
-    if df_estoque_bruto is not None:
-        caminho_estoque_con = os.path.join(diretorio_imports, 'ESTOQUE_CONSOLIDADO.csv')
-        df_estoque_bruto.to_csv(caminho_estoque_con, sep=';', index=False, header=False, encoding='latin-1')
-        print(f"✅ Arquivo de estoque consolidado salvo em: {caminho_estoque_con}")
-
-    # Debug: Mostrar no console
-    # print(df_vendas_bruto)
-    # print(df_estoque_bruto)
-
+    df_vendas_bruto = ler_csv_sem_header(venda_path)
+    df_estoque_bruto = ler_csv_sem_header(estoque_path)
 
     if df_vendas_bruto is not None and df_estoque_bruto is not None:
-        print(f"✅ Arquivos carregados e consolidados com sucesso: {len(vendas_files)} de vendas e {len(estoque_files)} de estoque.")
+        print(f"✅ Arquivos carregados com sucesso: {venda_path} ({len(df_vendas_bruto)} linhas) e {estoque_path} ({len(df_estoque_bruto)} linhas).")
 
-        # --- BACKUP DIÁRIO DE IMPORTAÇÕES ---
+        # --- BACKUP DIÁRIO DE IMPORTAÇÕES (apenas VENDA_ATUAL + ESTOQUE) ---
         print("Iniciando rotina de backup dos arquivos importados do dia...")
         arquivar_arquivos_importacao(diretorio_imports)
 
@@ -137,7 +113,7 @@ def main():
             
             print("\n--- Fluxo finalizado: Relatório gerado e pasta /output organizada ---")
             
-            # --- ENVIO PARA API ---
+           # --- ENVIO PARA API ---
             sucesso_envio = enviar_ultimo_relatorio()
             if not sucesso_envio:
                 print("❌ Falha ao enviar o relatório para a API.")

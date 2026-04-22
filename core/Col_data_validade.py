@@ -4,9 +4,10 @@ def processar_validade_estoque(df_estoque):
     """
     Pega a data de validade mais próxima (mínima) para cada EAN.
     """
-    # VARIÁVEIS DE CONFIGURAÇÃO
+    # CONFIGURAÇÃO (Baseado na estrutura da View VW_MULTFOCO_ESTOQUE)
+    # [0]=Filial_Cnpj, [1]=Codigo_Barras, [2]=Est_Disponivel, [3]=Lote, [4]=Data_Vencimento, [5]=Preco_custo
     INDICE_EAN = 1
-    INDICE_VALIDADE = 3
+    INDICE_VALIDADE = 4
 
     try:
         #Organização de string

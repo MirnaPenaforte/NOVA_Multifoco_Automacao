@@ -3,9 +3,10 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
-    image: nova-app:02
+    image: nova-app:03
     container_name: nova-app
     restart: unless-stopped
+    network_mode: host   # Necessário para acessar o SQL Server externo
     env_file:
       - .env
     environment:

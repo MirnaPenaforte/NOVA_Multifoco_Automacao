@@ -4,9 +4,10 @@ def processar_estoque_agrupado(df_estoque):
     """
     Agrupa EANs e soma o estoque usando índices configuráveis.
     """
-    # --- CONFIGURAÇÃO MANUAL (Ajuste aqui) ---
+    # --- CONFIGURAÇÃO (Baseado na estrutura da View VW_MULTFOCO_ESTOQUE) ---
+    # [0]=Filial_Cnpj, [1]=Codigo_Barras, [2]=Est_Disponivel, [3]=Lote, [4]=Data_Vencimento, [5]=Preco_custo
     INDICE_EAN = 1     
-    INDICE_ESTOQUE = 4 
+    INDICE_ESTOQUE = 2 
 
     try:
         #Limpar espaços e garantir que o EAN seja string
