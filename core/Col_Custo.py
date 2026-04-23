@@ -15,22 +15,16 @@ def extrair_preco_custo(df_estoque):
         # 2. Limpeza do EAN (sempre necessária)
         df_custo['EAN'] = df_custo['EAN'].astype(str).str.strip()
         
-        # 3. Tratamento do Preço — converter para numérico e formatar com 2 casas
-        df_custo['Preço Custo'] = (
-            df_custo['Preço Custo']
-            .astype(str)
-            .str.strip()
-            .str.replace('.', '', regex=False)   # Remove separador de milhar (ou ponto decimal errado)
-            .str.replace(',', '.', regex=False)  # Converte vírgula decimal para ponto
-        )
+        # 3. Tratamento do Preço: transformar direto em numérico/float
+        # Substitui vírgula por ponto (caso venha 14,63170000) e converte.
+        df_custo['Preço Custo'] = df_custo['Preço Custo'].astype(str).str.replace(',', '.', regex=False)
         df_custo['Preço Custo'] = pd.to_numeric(df_custo['Preço Custo'], errors='coerce').fillna(0.0)
+        df_custo['Preço Custo'] = df_custo['Preço Custo'].round(2)
         
-        # Formatar com 2 casas decimais e vírgula como separador decimal
-        df_custo['Preço Custo'] = df_custo['Preço Custo'].apply(
-            lambda x: f"{x:.2f}".replace('.', ',') if x > 0 else '0,00'
-        )
+        # 4. Se for <= 0, substituir por 0.001
+        df_custo.loc[df_custo['Preço Custo'] <= 0, 'Preço Custo'] = 0.001
 
-        # 4. Pega a última ocorrência (Preço mais recente)
+        # 5. Pega a última ocorrência (Preço mais recente)
         df_custo = df_custo.drop_duplicates(subset=['EAN'], keep='last')
 
         return df_custo

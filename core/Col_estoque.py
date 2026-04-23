@@ -16,6 +16,9 @@ def processar_estoque_agrupado(df_estoque):
         # 1. Garantir que os dados de estoque sejam numéricos
         df_estoque[INDICE_ESTOQUE] = pd.to_numeric(df_estoque[INDICE_ESTOQUE], errors='coerce').fillna(0)
 
+        # Filtrar para manter apenas as linhas onde o estoque é maior que zero
+        df_estoque = df_estoque[df_estoque[INDICE_ESTOQUE] > 0]
+
         # 2. Agrupamento e Soma
         # Agrupamos pelo índice do EAN e somamos a coluna de estoque
         df_agrupado = df_estoque.groupby(INDICE_EAN)[INDICE_ESTOQUE].sum().reset_index()

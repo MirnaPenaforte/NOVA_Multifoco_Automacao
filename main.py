@@ -11,7 +11,7 @@ from core.Col_data_entrada import preencher_data_entrada
 from utils.exporter_excel import gerar_relatorio_vendas
 from utils.controler_import import arquivar_arquivos_importacao
 from utils.api_client import enviar_ultimo_relatorio
-from utils.db_client import buscar_dados_views, filtrar_vendas_periodo_atual
+from utils.db_client import buscar_dados_views, filtrar_vendas_periodo_atual, filtrar_estoque_atual
 from utils.Disparo import iniciar_agendador
 
 def main():
@@ -50,18 +50,27 @@ def main():
         print("❌ Erro: Falha ao filtrar vendas por período.")
         return
 
-    # Remover o arquivo bruto de vendas (manter apenas VENDA_ATUAL)
+    # 4. Filtrar estoque — manter apenas produtos com estoque > 0
+    #    Gera ESTOQUE_ATUAL_DD-MM-AAAA.csv
+    estoque_atual_path = filtrar_estoque_atual(estoque_path)
+    if not estoque_atual_path:
+        print("❌ Erro: Falha ao filtrar estoque atual.")
+        return
+
+    # Remover os arquivos brutos (manter apenas VENDA_ATUAL e ESTOQUE_ATUAL)
     try:
         os.remove(venda_bruta_path)
         print(f"🗑️  Arquivo bruto removido: {venda_bruta_path}")
+        os.remove(estoque_path)
+        print(f"🗑️  Arquivo bruto removido: {estoque_path}")
     except OSError:
         pass
 
     df_vendas_bruto = ler_csv_sem_header(venda_path)
-    df_estoque_bruto = ler_csv_sem_header(estoque_path)
+    df_estoque_bruto = ler_csv_sem_header(estoque_atual_path)
 
     if df_vendas_bruto is not None and df_estoque_bruto is not None:
-        print(f"✅ Arquivos carregados com sucesso: {venda_path} ({len(df_vendas_bruto)} linhas) e {estoque_path} ({len(df_estoque_bruto)} linhas).")
+        print(f"✅ Arquivos carregados com sucesso: {venda_path} ({len(df_vendas_bruto)} linhas) e {estoque_atual_path} ({len(df_estoque_bruto)} linhas).")
 
         # --- BACKUP DIÁRIO DE IMPORTAÇÕES (apenas VENDA_ATUAL + ESTOQUE) ---
         print("Iniciando rotina de backup dos arquivos importados do dia...")
@@ -96,15 +105,15 @@ def main():
             df_final['Mês Atual'] = df_final['Mês Atual'].astype(int)
             df_final['Mês -1'] = df_final['Mês -1'].astype('Int64')
 
-            # Para todo item cujo estoque for 0, o preço de custo passa a ser "0,001"
+            # Para todo item cujo estoque for 0, o preço de custo passa a ser 0.001
             estoque_zero = df_final['Estoque'] == 0
-            df_final.loc[estoque_zero, 'Preço Custo'] = "0,001"
+            df_final.loc[estoque_zero, 'Preço Custo'] = 0.001
             
-            # Itens restantes sem preço recebem formato "0,00"
-            df_final['Preço Custo'] = df_final['Preço Custo'].fillna("0,00")
+            # Itens restantes sem preço recebem valor numérico 0.001
+            df_final['Preço Custo'] = df_final['Preço Custo'].fillna(0.001)
             
             # Garantia extra contra zeros inteiros salvos do processo
-            df_final['Preço Custo'] = df_final['Preço Custo'].astype(str).replace('0', '0,00').replace('0.0', '0,00')
+            df_final.loc[df_final['Preço Custo'] == 0, 'Preço Custo'] = 0.001
 
             # --- EXPORTAÇÃO E GESTÃO DE ARQUIVOS (Output) ---
             # Esta função cria as colunas vazias, salva na pasta /output 

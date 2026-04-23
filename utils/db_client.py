@@ -231,6 +231,63 @@ def filtrar_vendas_periodo_atual(caminho_venda_bruto: str) -> str:
         print(f"❌ Erro ao filtrar vendas por período: {e}")
         return None
 
+def filtrar_estoque_atual(caminho_estoque_bruto: str) -> str:
+    """
+    Filtra o CSV bruto de estoque para manter apenas as linhas onde o estoque (índice 2)
+    é maior que zero. Salva o resultado filtrado como ESTOQUE_ATUAL_DD-MM-AAAA.csv.
+
+    Args:
+        caminho_estoque_bruto: caminho do arquivo CSV bruto de estoque.
+
+    Retorna:
+        caminho do arquivo CSV filtrado, ou None se falhar.
+    """
+    INDICE_ESTOQUE = 2
+
+    try:
+        df = pd.read_csv(
+            caminho_estoque_bruto,
+            sep=';',
+            header=None,
+            encoding='latin-1',
+            dtype=str,
+        )
+
+        total_original = len(df)
+
+        # Converter a coluna de estoque para numérico para aplicar o filtro
+        df[INDICE_ESTOQUE] = pd.to_numeric(df[INDICE_ESTOQUE], errors='coerce').fillna(0)
+
+        # Filtrar as linhas onde o estoque é > 0
+        df_filtrado = df[df[INDICE_ESTOQUE] > 0].copy()
+
+        # Opcional: Converter de volta para inteiro/string se necessário, 
+        # mas como é salvo em CSV o pandas lidará com o numérico corretamente.
+        # Caso precise manter o formato original exato (ex. string sem ".0"):
+        df_filtrado[INDICE_ESTOQUE] = df_filtrado[INDICE_ESTOQUE].astype(int).astype(str)
+
+        # Salvar como ESTOQUE_ATUAL_DD-MM-AAAA.csv
+        hoje = datetime.now()
+        data_str = hoje.strftime("%d-%m-%Y")
+        nome_arquivo = f"ESTOQUE_ATUAL_{data_str}.csv"
+        caminho_saida = os.path.join(DIRETORIO_IMPORTS, nome_arquivo)
+
+        df_filtrado.to_csv(
+            caminho_saida,
+            sep=';',
+            index=False,
+            header=False,
+            encoding='latin-1',
+        )
+
+        print(f"🔍 Filtro de estoque aplicado: {total_original} → {len(df_filtrado)} registros (estoque > 0)")
+        print(f"📥 Arquivo de estoque atual salvo: {caminho_saida}  ({len(df_filtrado)} linhas)")
+        return caminho_saida
+
+    except Exception as e:
+        print(f"❌ Erro ao filtrar estoque: {e}")
+        return None
+
 
 def buscar_dados_views() -> list[str]:
     """
