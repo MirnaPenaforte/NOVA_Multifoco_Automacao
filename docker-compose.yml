@@ -3,9 +3,9 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
-    image: nova-app:03
+    image: nova-app:latest
     container_name: nova-app
-    restart: unless-stopped
+    restart: always   # Garante que o serviço volte caso a máquina seja reiniciada
     network_mode: host   # Necessário para acessar o SQL Server externo
     env_file:
       - .env
@@ -22,8 +22,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    # Adicionando um healthcheck simples para verificar se o processo está rodando
     healthcheck:
+      # O pacote procps (pgrep) agora está instalado no Dockerfile
       test: ["CMD", "pgrep", "-f", "main.py"]
       interval: 1m
       timeout: 10s

@@ -7,7 +7,7 @@ Este sistema automatiza todo o ciclo de vida dos dados de Vendas e Estoque da Mu
 - **Inteligência de Data de Entrada:** O sistema descobre a Data de Entrada analisando os lotes do produto no Estoque (indicadores em colunas fixas).
 - **Captura via FTP:** O client FTP automatizado sincroniza planilhas (.csv) hospedadas em servidores parceiros.
 - **Comunicação com API:** O relatório final formatado é despachado para a API administrativa.
-- **Agendamento Automático:** O sistema possui um agendador integrado que executa a rotina automaticamente em horários pré-definidos (08:00, 15:00 e 20:00).
+- **Agendamento Automático:** O sistema possui um agendador integrado que executa a rotina automaticamente a cada 2 horas.
 - **Backup e Retenção:** Arquivos consumidos são arquivados com timestamp, e backups antigos são limpos automaticamente (30-60 dias).
 
 ## 2. Como Rodar (Docker - Recomendado)

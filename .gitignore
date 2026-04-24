@@ -16,6 +16,10 @@ dist/
 imports/
 output/
 logs/
+imports_old/
+output_old/
+logs_old/
+
 
 # IDEs
 .idea/

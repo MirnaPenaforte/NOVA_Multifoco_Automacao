@@ -57,7 +57,11 @@ def main():
         print("❌ Erro: Falha ao filtrar estoque atual.")
         return
 
-    # Remover os arquivos brutos (manter apenas VENDA_ATUAL e ESTOQUE_ATUAL)
+    # --- BACKUP DIÁRIO DE IMPORTAÇÕES (Raw + Atual) ---
+    print("Iniciando rotina de backup dos arquivos importados do dia...")
+    arquivar_arquivos_importacao(diretorio_imports)
+
+    # Remover os arquivos brutos (manter apenas VENDA_ATUAL e ESTOQUE_ATUAL na pasta raiz)
     try:
         os.remove(venda_bruta_path)
         print(f"🗑️  Arquivo bruto removido: {venda_bruta_path}")
@@ -71,10 +75,6 @@ def main():
 
     if df_vendas_bruto is not None and df_estoque_bruto is not None:
         print(f"✅ Arquivos carregados com sucesso: {venda_path} ({len(df_vendas_bruto)} linhas) e {estoque_atual_path} ({len(df_estoque_bruto)} linhas).")
-
-        # --- BACKUP DIÁRIO DE IMPORTAÇÕES (apenas VENDA_ATUAL + ESTOQUE) ---
-        print("Iniciando rotina de backup dos arquivos importados do dia...")
-        arquivar_arquivos_importacao(diretorio_imports)
 
         # --- PROCESSAMENTOS INDIVIDUAIS ---
         estoque_final = processar_estoque_agrupado(df_estoque_bruto.copy())
@@ -137,5 +137,5 @@ if __name__ == "__main__":
     # Executa uma vez imediatamente ao iniciar
     main()
     
-    # Inicia o agendador para os horários programados (08:00, 15:00, 20:00)
+    # Inicia o agendador para rodar a cada 2 horas
     iniciar_agendador(main)

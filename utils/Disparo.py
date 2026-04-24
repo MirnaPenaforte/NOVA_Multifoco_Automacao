@@ -25,22 +25,20 @@ def executar_pipeline(main_func):
     except Exception as e:
         logging.error(f"❌ Erro durante execução: {e}")
     
-    logging.info("🕐 Aguardando próximo horário... (08:00 | 15:00 | 20:00)")
+    logging.info("🕐 Aguardando próximo horário... (a cada 2 horas)")
 
 
 def iniciar_agendador(main_func):
     """
     Configura e inicia o agendador de disparos.
-    Agenda a execução de main_func todos os dias às 08:00, 15:00 e 20:00.
+    Agenda a execução de main_func a cada 2 horas.
 
     Args:
         main_func: A função principal a ser executada nos horários agendados.
     """
-    schedule.every().day.at("08:00").do(executar_pipeline, main_func=main_func)
-    schedule.every().day.at("15:00").do(executar_pipeline, main_func=main_func)
-    schedule.every().day.at("20:00").do(executar_pipeline, main_func=main_func)
+    schedule.every(2).hours.do(executar_pipeline, main_func=main_func)
 
-    logging.info("🕐 Agendador iniciado. Disparos programados para: 08:00 | 15:00 | 20:00")
+    logging.info("🕐 Agendador iniciado. Disparos programados para: a cada 2 horas")
     logging.info("   Aguardando próximo horário... (pressione Ctrl+C para encerrar)")
 
     while True:
