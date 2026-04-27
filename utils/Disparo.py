@@ -31,14 +31,14 @@ def executar_pipeline(main_func):
 def iniciar_agendador(main_func):
     """
     Configura e inicia o agendador de disparos.
-    Agenda a execução de main_func a cada 2 horas.
+    Agenda a execução de main_func a cada 1 hora.
 
     Args:
         main_func: A função principal a ser executada nos horários agendados.
     """
-    schedule.every(2).hours.do(executar_pipeline, main_func=main_func)
+    schedule.every(1).hours.do(executar_pipeline, main_func=main_func)
 
-    logging.info("🕐 Agendador iniciado. Disparos programados para: a cada 2 horas")
+    logging.info("🕐 Agendador iniciado. Disparos programados para: a cada 1 hora")
     logging.info("   Aguardando próximo horário... (pressione Ctrl+C para encerrar)")
 
     while True:
