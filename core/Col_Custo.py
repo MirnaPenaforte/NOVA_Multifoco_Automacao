@@ -1,4 +1,32 @@
 import pandas as pd
+import os
+import glob
+
+def carregar_eans_sem_custo():
+    """
+    Carrega a lista de EANs que devem ter o preço de custo em branco.
+    Busca na pasta 'imports/EANs_S_CUSTO' por qualquer arquivo CSV.
+    """
+    diretorio = os.path.join('imports', 'EANs_S_CUSTO')
+    eans_sem_custo = set()
+
+    if not os.path.exists(diretorio):
+        return eans_sem_custo
+
+    arquivos_csv = glob.glob(os.path.join(diretorio, "*.csv"))
+    
+    for arquivo in arquivos_csv:
+        try:
+            # Lê o arquivo. Como vimos, é uma lista simples de EANs (um por linha)
+            df = pd.read_csv(arquivo, header=None, dtype=str)
+            if not df.empty:
+                # Pega a primeira coluna (índice 0) e adiciona ao set
+                eans_sem_custo.update(df[0].str.strip().tolist())
+        except Exception as e:
+            print(f"⚠️ Erro ao ler arquivo de EANs sem custo {arquivo}: {e}")
+            
+    return eans_sem_custo
+
 
 def extrair_preco_custo(df_estoque):
     """
