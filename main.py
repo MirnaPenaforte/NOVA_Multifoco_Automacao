@@ -5,7 +5,7 @@ import pandas as pd
 from core.read_Csv import ler_csv_sem_header
 from core.Col_estoque import processar_estoque_agrupado
 from core.Col_data_validade import processar_validade_estoque
-from core.Col_Custo import extrair_preco_custo, carregar_eans_sem_custo
+from core.Col_Custo import extrair_preco_custo
 from core.Col_Mes_atual import agrupar_vendas
 from core.Col_faturamento_total import calcular_faturamento_atual
 from core.Col_data_entrada import preencher_data_entrada
@@ -115,14 +115,6 @@ def main():
             
             # Garantia extra contra zeros inteiros salvos do processo
             df_final.loc[df_final['Preço Custo'] == 0, 'Preço Custo'] = 0.001
-
-            # --- NOVO: Zerar Preço Custo para EANs específicos (Solicitação do Usuário) ---
-            eans_sem_custo = carregar_eans_sem_custo()
-            if eans_sem_custo:
-                # Garante que a coluna EAN seja string para comparação correta
-                df_final['EAN'] = df_final['EAN'].astype(str).str.strip()
-                df_final.loc[df_final['EAN'].isin(eans_sem_custo), 'Preço Custo'] = ""
-                print(f"✅ {len(eans_sem_custo)} EANs configurados com preço de custo em branco.")
 
             # --- EXPORTAÇÃO E GESTÃO DE ARQUIVOS (Output) ---
             # Esta função cria as colunas vazias, salva na pasta /output 

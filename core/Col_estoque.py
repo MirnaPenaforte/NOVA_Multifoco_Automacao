@@ -8,22 +8,25 @@ def processar_estoque_agrupado(df_estoque):
     # [0]=Filial_Cnpj, [1]=Codigo_Barras, [2]=Est_Disponivel, [3]=Lote, [4]=Data_Vencimento, [5]=Preco_custo
     INDICE_EAN = 1     
     INDICE_ESTOQUE = 2 
+    INDICE_LOTE = 3
 
     try:
-        #Limpar espaços e garantir que o EAN seja string
-        df_estoque[INDICE_EAN] = df_estoque[INDICE_EAN].astype(str).str.strip()
+        # 1. Limpeza do EAN e Lote
+        df_estoque[INDICE_EAN] = df_estoque[INDICE_EAN].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+        df_estoque[INDICE_LOTE] = df_estoque[INDICE_LOTE].astype(str).str.strip()
 
-        # 1. Garantir que os dados de estoque sejam numéricos
+        # 2. Garantir que os dados de estoque sejam numéricos e filtrar > 0
         df_estoque[INDICE_ESTOQUE] = pd.to_numeric(df_estoque[INDICE_ESTOQUE], errors='coerce').fillna(0)
-
-        # Filtrar para manter apenas as linhas onde o estoque é maior que zero
         df_estoque = df_estoque[df_estoque[INDICE_ESTOQUE] > 0]
 
-        # 2. Agrupamento e Soma
+        # 3. DEDUPLICAÇÃO: Se for o mesmo EAN com o mesmo lote, considera apenas uma linha
+        df_estoque = df_estoque.drop_duplicates(subset=[INDICE_EAN, INDICE_LOTE], keep='first')
+
+        # 4. Agrupamento e Soma
         # Agrupamos pelo índice do EAN e somamos a coluna de estoque
         df_agrupado = df_estoque.groupby(INDICE_EAN)[INDICE_ESTOQUE].sum().reset_index()
 
-        # 3. Renomear para a saída final
+        # 5. Renomear para a saída final
         df_agrupado.columns = ['EAN', 'Estoque']
 
         return df_agrupado

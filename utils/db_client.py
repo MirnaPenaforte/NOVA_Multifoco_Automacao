@@ -38,7 +38,7 @@ QUERY_VENDAS = """
         Saida_Filial_Cnpj,
         Saida_Quantidade,
         TRY_CONVERT(NUMERIC(18,4), Saida_Valor_Unitario_Item) AS Saida_Valor_Unitario_Item,
-        Produto_Ean,
+        CAST(Produto_Ean AS VARCHAR(MAX)) AS Produto_Ean,
         Vendedor_Codigo,
         Vendedor_Nome,
         Vendedor_Ativo,
@@ -342,6 +342,14 @@ def buscar_dados_views() -> list[str]:
                 if df.empty:
                     print(f"⚠️  Query retornou 0 registros — arquivo não será gerado.")
                     continue
+
+                # --- LIMPEZA DE EAN (Garante que códigos de 14 dígitos não virem floats) ---
+                # Vendas: EAN está no índice 6. Estoque: EAN está no índice 1.
+                idx_ean = 6 if nome_base == NOME_ARQUIVO_VENDAS else 1
+                if len(df.columns) > idx_ean:
+                    col_ean = df.columns[idx_ean]
+                    # Converte para string e remove o ".0" que o pandas/sql pode inserir em números grandes
+                    df[col_ean] = df[col_ean].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
                 print(f"   ✔ {len(df)} registros encontrados.")
                 caminho = _salvar_csv(df, nome_base)
