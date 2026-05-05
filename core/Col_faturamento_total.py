@@ -14,9 +14,10 @@ def calcular_faturamento_atual(df_vendas):
     INDICE_EAN = 6       # Coluna 7
 
     try:
-        # 0. Filtrar CFOPs indesejados
+        # 0. Filtrar apenas CFOPs válidos para faturamento (whitelist)
+        CFOPS_FATURAMENTO = {'5403', '4505', '5102','6102'}
         df_vendas[INDICE_CFOP] = df_vendas[INDICE_CFOP].astype(str).str.strip()
-        df_vendas = df_vendas[~df_vendas[INDICE_CFOP].isin(['6202', '5202'])]
+        df_vendas = df_vendas[df_vendas[INDICE_CFOP].isin(CFOPS_FATURAMENTO)]
 
         # 1. Limpeza do EAN
         df_vendas[INDICE_EAN] = df_vendas[INDICE_EAN].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()

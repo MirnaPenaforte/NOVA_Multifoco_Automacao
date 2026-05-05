@@ -17,32 +17,71 @@ from utils.Disparo import iniciar_agendador
 
 def main():
     diretorio_imports = 'imports'
-    
-    print("\n--- Extração de dados das Views ---")
-    try:
-        # Busca os dados diretamente do banco de dados via views
-        arquivos_baixados = buscar_dados_views()
-        if not arquivos_baixados:
-            print("⚠️ Aviso: Nenhum dado retornado das Views. A rotina será encerrada.")
+
+    # =========================================================
+    # FLAG: USE_BANCO
+    #   True  → busca dados do banco de dados (comportamento normal)
+    #   False → usa os arquivos CSV já existentes na pasta /imports
+    # =========================================================
+    USE_BANCO = True
+
+    if USE_BANCO:
+        print("\n--- Extração de dados das Views ---")
+        try:
+            arquivos_baixados = buscar_dados_views()
+            if not arquivos_baixados:
+                print("⚠️ Aviso: Nenhum dado retornado das Views. A rotina será encerrada.")
+                return
+        except RuntimeError as e:
+            print(f"❌ Erro crítico na conexão: {e}")
+            print("A rotina será retomada no próximo disparo agendado.")
             return
-    except RuntimeError as e:
-        print(f"❌ Erro crítico na conexão: {e}")
-        print("A rotina será retomada no próximo disparo agendado.")
-        return
-    except Exception as e:
-        print(f"❌ Erro inesperado na extração: {e}")
-        return
+        except Exception as e:
+            print(f"❌ Erro inesperado na extração: {e}")
+            return
 
+        venda_bruta_path = next((f for f in arquivos_baixados if 'VENDA' in os.path.basename(f).upper()), None)
+        estoque_path     = next((f for f in arquivos_baixados if 'ESTOQUE' in os.path.basename(f).upper()), None)
 
-    # 2. Carregamento dos Arquivos Originais baixados do banco
-    print("Carregando arquivos originais baixados do banco...")
-    
-    venda_bruta_path = next((f for f in arquivos_baixados if 'VENDA' in os.path.basename(f).upper()), None)
-    estoque_path = next((f for f in arquivos_baixados if 'ESTOQUE' in os.path.basename(f).upper()), None)
-    
-    if not venda_bruta_path or not estoque_path:
-        print("❌ Erro: Arquivos de VENDA ou ESTOQUE não encontrados na extração.")
-        return
+        if not venda_bruta_path or not estoque_path:
+            print("❌ Erro: Arquivos de VENDA ou ESTOQUE não encontrados na extração.")
+            return
+
+    else:
+        # --- MODO OFFLINE: lê os arquivos brutos existentes em /imports ---
+        print("\n⚠️  [MODO OFFLINE] Banco de dados desativado. Usando arquivos da pasta /imports.")
+
+        arquivos_imports = [
+            os.path.join(diretorio_imports, f)
+            for f in os.listdir(diretorio_imports)
+            if f.endswith('.csv')
+        ]
+
+        # Seleciona o arquivo VENDA mais recente (ignora VENDA_ATUAL)
+        vendas_brutas = sorted(
+            [f for f in arquivos_imports if 'VENDA' in os.path.basename(f).upper() and 'ATUAL' not in os.path.basename(f).upper()],
+            key=os.path.getmtime,
+            reverse=True,
+        )
+        # Seleciona o arquivo ESTOQUE mais recente (ignora ESTOQUE_ATUAL)
+        estoques_brutos = sorted(
+            [f for f in arquivos_imports if 'ESTOQUE' in os.path.basename(f).upper() and 'ATUAL' not in os.path.basename(f).upper()],
+            key=os.path.getmtime,
+            reverse=True,
+        )
+
+        if not vendas_brutas:
+            print("❌ Nenhum arquivo VENDA encontrado na pasta /imports.")
+            return
+        if not estoques_brutos:
+            print("❌ Nenhum arquivo ESTOQUE encontrado na pasta /imports.")
+            return
+
+        venda_bruta_path = vendas_brutas[0]
+        estoque_path     = estoques_brutos[0]
+        print(f"📂 VENDA  : {venda_bruta_path}")
+        print(f"📂 ESTOQUE: {estoque_path}")
+
 
     # 3. Filtrar vendas — manter apenas mês atual e mês anterior
     #    Gera VENDA_ATUAL_DD-MM-AAAA.csv com datas convertidas para dd/mm/YYYY
@@ -62,14 +101,16 @@ def main():
     print("Iniciando rotina de backup dos arquivos importados do dia...")
     arquivar_arquivos_importacao(diretorio_imports)
 
-    # Remover os arquivos brutos (manter apenas VENDA_ATUAL e ESTOQUE_ATUAL na pasta raiz)
-    try:
-        os.remove(venda_bruta_path)
-        print(f"🗑️  Arquivo bruto removido: {venda_bruta_path}")
-        os.remove(estoque_path)
-        print(f"🗑️  Arquivo bruto removido: {estoque_path}")
-    except OSError:
-        pass
+    # Remover os arquivos brutos apenas quando veio do banco
+    # (em modo offline, preservamos os arquivos originais da pasta)
+    if USE_BANCO:
+        try:
+            os.remove(venda_bruta_path)
+            print(f"🗑️  Arquivo bruto removido: {venda_bruta_path}")
+            os.remove(estoque_path)
+            print(f"🗑️  Arquivo bruto removido: {estoque_path}")
+        except OSError:
+            pass
 
     df_vendas_bruto = ler_csv_sem_header(venda_path)
     df_estoque_bruto = ler_csv_sem_header(estoque_atual_path)
