@@ -15,7 +15,7 @@ def calcular_faturamento_atual(df_vendas):
 
     try:
         # 0. Filtrar apenas CFOPs válidos para faturamento (whitelist)
-        CFOPS_FATURAMENTO = {'5403', '4505', '5102','6102'}
+        CFOPS_FATURAMENTO = {'5403', '5405' '5102','6102', '6405', '5101', '6101'}
         df_vendas[INDICE_CFOP] = df_vendas[INDICE_CFOP].astype(str).str.strip()
         df_vendas = df_vendas[df_vendas[INDICE_CFOP].isin(CFOPS_FATURAMENTO)]
 
