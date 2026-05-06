@@ -139,7 +139,7 @@ def main():
             df_final = preencher_data_entrada(df_final)
 
             # 3. Limpeza de Nulos e Tipagem
-            colunas_numericas = ['Estoque', 'Mês Atual', 'Faturamento Atual']
+            colunas_numericas = ['Estoque', 'Mês Atual', 'Faturamento Atual', 'Faturamento M-1']
             df_final[colunas_numericas] = df_final[colunas_numericas].fillna(0)
         
             # Garantir formato inteiro para colunas de contagem

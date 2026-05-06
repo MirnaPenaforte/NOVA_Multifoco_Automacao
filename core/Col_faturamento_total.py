@@ -55,6 +55,7 @@ def calcular_faturamento_atual(df_vendas):
         # 5. Merge final
         df_final = pd.merge(df_atual, df_passado, on='EAN', how='outer')
         df_final['Faturamento Atual'] = df_final['Faturamento Atual'].fillna(0.0)
+        df_final['Faturamento M-1'] = df_final['Faturamento M-1'].fillna(0.0)
 
         return df_final
 
