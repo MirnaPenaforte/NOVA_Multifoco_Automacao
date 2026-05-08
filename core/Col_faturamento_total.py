@@ -25,7 +25,7 @@ def calcular_faturamento_atual(df_vendas):
 
         print(f"   ↳ Linhas após filtro CFOP: {len(df_vendas)}")
 
-        # 1. Limpeza do EAN
+        # 1. Limpeza do EAN 
         df_vendas[INDICE_EAN] = df_vendas[INDICE_EAN].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
         # 2. Converter valor para float (formato BR: "71,94" → 71.94)
