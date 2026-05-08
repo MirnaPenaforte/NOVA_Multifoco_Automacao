@@ -3,7 +3,41 @@ import os
 import glob
 import shutil
 from datetime import datetime
-from utils.controler_import import MESES_PT, limpar_backups_antigos
+MESES_PT = {
+    1: 'Janeiro', 2: 'Fevereiro', 3: 'Marco', 4: 'Abril',
+    5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
+    9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
+}
+
+def limpar_backups_antigos(dir_backups, data_atual):
+    """
+    Remove as pastas de meses de backup que são muito antigas.
+    Mantém o mês atual e os dois meses anteriores. Exclui o resto para garantir pelo menos 60 dias de histórico.
+    """
+    if not os.path.exists(dir_backups):
+        return
+        
+    for pasta_mes in os.listdir(dir_backups):
+        caminho_pasta = os.path.join(dir_backups, pasta_mes)
+        
+        if os.path.isdir(caminho_pasta):
+            # Formato esperado: 03_Marco_2026
+            partes = pasta_mes.split('_')
+            if len(partes) >= 3:
+                try:
+                    mes_pasta = int(partes[0])
+                    ano_pasta = int(partes[-1])
+                    
+                    # Convertendo Mês + Ano num índice linear de meses para comparar a diferença
+                    meses_atuais_total = data_atual.year * 12 + data_atual.month
+                    meses_pasta_total = ano_pasta * 12 + mes_pasta
+                    
+                    # Se o índice da pasta é menor do que (mês atual - 2), excluímos (garante pelo menos 60 dias de histórico)
+                    if meses_atuais_total - meses_pasta_total >= 3:
+                        shutil.rmtree(caminho_pasta)
+                        print(f"🧹 Backup de mês antigo deletado (mantendo últimos 60-90 dias): {pasta_mes}")
+                except Exception as e:
+                    print(f"⚠️ Erro ao verificar idade do backup na pasta {pasta_mes}: {e}")
 
 def storage_output(diretorio_saida):
     """
