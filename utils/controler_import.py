@@ -1,86 +1,124 @@
 import os
 import shutil
 import glob
-from datetime import datetime, timedelta
+from datetime import datetime
 
-MESES_PT = {
-    1: "Janeiro", 2: "Fevereiro", 3: "Marco", 4: "Abril",
-    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
-    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
-}
+# Limite de cópias mantidas por arquivo-base (ex: VENDA, ESTOQUE)
+MAX_BACKUPS_POR_BASE = 30
 
-def arquivar_arquivos_importacao(diretorio_imports='imports'):
+
+def _timestamp_str() -> str:
+    """Retorna timestamp no formato dd-mm-aaaa-HH (ex: 08-05-2026-14h30)."""
+    return datetime.now().strftime('%d-%m-%Y-%Hh%M')
+
+
+def _salvar_backup(caminho_origem: str, dir_destino: str) -> str | None:
     """
-    Cria uma rotina de backup de arquivos CSV diários.
-    Agrupa por 'Mês/Dia', guardando os arquivos originais.
-    Limpa backups que tenham mais de dois meses (mantém aproximadamente 60-90 dias).
+    Copia o arquivo de origem para dir_destino com sufixo de timestamp.
+    Mantém no máximo MAX_BACKUPS_POR_BASE arquivos por nome-base.
+    Retorna o caminho do arquivo salvo, ou None se falhar.
     """
     try:
-        hoje = datetime.now()
-        mes_str = f"{hoje.month:02d}_{MESES_PT[hoje.month]}_{hoje.year}"
-        dia_str = hoje.strftime('%d-%m-%Y')
-        
-        dir_backups = os.path.join(diretorio_imports, 'backups')
-        dir_backup_mes = os.path.join(dir_backups, mes_str)
-        dir_backup_dia = os.path.join(dir_backup_mes, dia_str)
-        
-        # Cria as pastas de backup (Mês e Dia)
-        os.makedirs(dir_backup_dia, exist_ok=True)
-        
-        # Pega todos os CSVs soltos dentro da pasta imports (apenas arquivos)
-        # ignora os arquivos que já estão dentro de pastas (como /backups/)
-        padrao_csv = os.path.join(diretorio_imports, '*.csv')
-        csv_files = [f for f in glob.glob(padrao_csv) if os.path.isfile(f)]
-        
-        arquivos_copiados = []
-        for arquivo in csv_files:
-            nome_base, ext = os.path.splitext(os.path.basename(arquivo))
-            # Registra o nome com dia e hora
-            data_hora_str = hoje.strftime('%d-%m-%Y_%Hh%Mm')
-            novo_nome = f"{nome_base}_{data_hora_str}{ext}"
-            
-            caminho_destino = os.path.join(dir_backup_dia, novo_nome)
-            shutil.copy2(arquivo, caminho_destino)
-            arquivos_copiados.append(caminho_destino)
-            print(f"📦 Backup salvo: {novo_nome} em {mes_str}/{dia_str}")
-                
-        # Limpar os arquivos muito antigos (mais de 30 dias ou referentes a meses anteriores removíveis)
-        limpar_backups_antigos(dir_backups, hoje)
-        
-        return arquivos_copiados
+        os.makedirs(dir_destino, exist_ok=True)
+
+        nome_base, ext = os.path.splitext(os.path.basename(caminho_origem))
+        novo_nome = f"{nome_base}_{_timestamp_str()}{ext}"
+        caminho_destino = os.path.join(dir_destino, novo_nome)
+
+        shutil.copy2(caminho_origem, caminho_destino)
+        print(f"📦 Backup salvo: {caminho_destino}")
+
+        # Limitar número de backups: manter apenas os MAX_BACKUPS_POR_BASE mais recentes
+        # por prefixo (ex: "VENDA_", "ESTOQUE_")
+        prefixo = nome_base.split('_')[0]  # ex: "VENDA" ou "ESTOQUE"
+        arquivos_existentes = sorted(
+            glob.glob(os.path.join(dir_destino, f"{prefixo}*{ext}")),
+            key=os.path.getmtime,
+            reverse=True,
+        )
+        for arquivo_antigo in arquivos_existentes[MAX_BACKUPS_POR_BASE:]:
+            os.remove(arquivo_antigo)
+            print(f"🧹 Backup antigo removido: {arquivo_antigo}")
+
+        return caminho_destino
 
     except Exception as e:
-        print(f"❌ Erro na rotina de backup dos arquivos de importação: {e}")
-        return []
+        print(f"❌ Erro ao salvar backup de '{caminho_origem}': {e}")
+        return None
 
 
-def limpar_backups_antigos(dir_backups, data_atual):
+def arquivar_arquivo_raw(caminho_bruto: str, diretorio_imports: str = 'imports') -> str | None:
     """
-    Remove as pastas de meses de backup que são muito antigas.
-    Mantém o mês atual e os dois meses anteriores. Exclui o resto para garantir pelo menos 60 dias de histórico.
-    """
-    if not os.path.exists(dir_backups):
-        return
-        
-    for pasta_mes in os.listdir(dir_backups):
-        caminho_pasta = os.path.join(dir_backups, pasta_mes)
-        
-        if os.path.isdir(caminho_pasta):
-            # Formato esperado: 03_Marco_2026
-            partes = pasta_mes.split('_')
-            if len(partes) >= 3:
-                try:
-                    mes_pasta = int(partes[0])
-                    ano_pasta = int(partes[-1])
-                    
-                    # Convertendo Mês + Ano num índice linear de meses para comparar a diferença
-                    meses_atuais_total = data_atual.year * 12 + data_atual.month
-                    meses_pasta_total = ano_pasta * 12 + mes_pasta
-                    
-                    # Se o índice da pasta é menor do que (mês atual - 2), excluímos (garante pelo menos 60 dias de histórico)
-                    if meses_atuais_total - meses_pasta_total >= 3:
-                        shutil.rmtree(caminho_pasta)
-                        print(f"🧹 Backup de mês antigo deletado (mantendo últimos 60-90 dias): {pasta_mes}")
-                except Exception as e:
-                    print(f"⚠️ Erro ao verificar idade do backup na pasta {pasta_mes}: {e}")
+    Salva uma cópia idêntica do arquivo bruto (como baixado) em:
+        imports/backups/raw/ARQUIVO_dd-mm-ano-hora.csv
 
+    Args:
+        caminho_bruto: Caminho do arquivo original bruto.
+        diretorio_imports: Pasta raiz de imports (padrão: 'imports').
+
+    Retorna:
+        Caminho do backup salvo, ou None se falhar.
+    """
+    dir_raw = os.path.join(diretorio_imports, 'backups', 'raw')
+    return _salvar_backup(caminho_bruto, dir_raw)
+
+
+def arquivar_arquivo_filtrado(caminho_filtrado: str, diretorio_imports: str = 'imports') -> str | None:
+    """
+    Salva uma cópia do arquivo filtrado (_ATUAL_) em:
+        imports/backups/filtrado/ARQUIVO_dd-mm-ano-hora.csv
+
+    Args:
+        caminho_filtrado: Caminho do arquivo filtrado (_ATUAL_).
+        diretorio_imports: Pasta raiz de imports (padrão: 'imports').
+
+    Retorna:
+        Caminho do backup salvo, ou None se falhar.
+    """
+    dir_filtrado = os.path.join(diretorio_imports, 'backups', 'filtrado')
+    return _salvar_backup(caminho_filtrado, dir_filtrado)
+
+
+def arquivar_arquivos_importacao(
+    diretorio_imports: str = 'imports',
+    venda_bruta_path: str = None,
+    estoque_bruto_path: str = None,
+    venda_filtrada_path: str = None,
+    estoque_filtrado_path: str = None,
+) -> dict:
+    """
+    Rotina principal de backup. Salva:
+      - Arquivos brutos (exatamente como baixados) em imports/backups/raw/
+      - Arquivos filtrados (_ATUAL_) em imports/backups/filtrado/
+
+    Apenas uma cópia por execução, com sufixo de timestamp dd-mm-ano-hora.
+
+    Args:
+        diretorio_imports:    Pasta raiz de imports.
+        venda_bruta_path:     Caminho do CSV bruto de vendas.
+        estoque_bruto_path:   Caminho do CSV bruto de estoque.
+        venda_filtrada_path:  Caminho do CSV filtrado de vendas (_ATUAL_).
+        estoque_filtrado_path: Caminho do CSV filtrado de estoque (_ATUAL_).
+
+    Retorna:
+        dict com as chaves 'raw' e 'filtrado', cada uma com lista dos backups salvos.
+    """
+    resultado = {'raw': [], 'filtrado': []}
+
+    print("\n--- Rotina de Backup dos Arquivos de Importação ---")
+
+    # Backup dos arquivos brutos (raw)
+    for caminho in filter(None, [venda_bruta_path, estoque_bruto_path]):
+        backup = arquivar_arquivo_raw(caminho, diretorio_imports)
+        if backup:
+            resultado['raw'].append(backup)
+
+    # Backup dos arquivos filtrados
+    for caminho in filter(None, [venda_filtrada_path, estoque_filtrado_path]):
+        backup = arquivar_arquivo_filtrado(caminho, diretorio_imports)
+        if backup:
+            resultado['filtrado'].append(backup)
+
+    total = len(resultado['raw']) + len(resultado['filtrado'])
+    print(f"✅ Backup concluído: {total} arquivo(s) arquivado(s).")
+    return resultado
