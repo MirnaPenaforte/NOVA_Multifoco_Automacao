@@ -24,7 +24,7 @@ def main():
     #   True  → busca dados do banco de dados (comportamento normal)
     #   False → usa os arquivos CSV já existentes na pasta /imports
     # =========================================================
-    USE_BANCO = False
+    USE_BANCO = True
 
     if USE_BANCO:
         print("\n--- Extração de dados das Views ---")

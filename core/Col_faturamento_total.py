@@ -14,7 +14,8 @@ def calcular_faturamento_atual(df_vendas):
     """
     INDICE_CFOP = 0      # Coluna 1 — CFOP
     INDICE_DATA = 1      # Coluna 2 — Data (dd/mm/YYYY)
-    INDICE_VALOR = 5     # Coluna 6 — Valor do faturamento (ex: 71,94)
+    INDICE_QTD = 4       # Coluna 5 — Qtd vendida
+    INDICE_VALOR = 5     # Coluna 6 — Valor unitário
     INDICE_EAN = 6       # Coluna 7 — EAN do produto
 
     try:
@@ -28,7 +29,15 @@ def calcular_faturamento_atual(df_vendas):
         # 1. Limpeza do EAN 
         df_vendas[INDICE_EAN] = df_vendas[INDICE_EAN].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
-        # 2. Converter valor para float (formato BR: "71,94" → 71.94)
+        # 2. Converter valores para float
+        df_vendas[INDICE_QTD] = (
+            df_vendas[INDICE_QTD]
+            .astype(str)
+            .str.replace('.', '', regex=False)
+            .str.replace(',', '.', regex=False)
+        )
+        df_vendas[INDICE_QTD] = pd.to_numeric(df_vendas[INDICE_QTD], errors='coerce').fillna(0.0)
+
         df_vendas[INDICE_VALOR] = (
             df_vendas[INDICE_VALOR]
             .astype(str)
@@ -36,6 +45,9 @@ def calcular_faturamento_atual(df_vendas):
             .str.replace(',', '.', regex=False)  # vírgula decimal → ponto
         )
         df_vendas[INDICE_VALOR] = pd.to_numeric(df_vendas[INDICE_VALOR], errors='coerce').fillna(0.0)
+
+        # Calcular o faturamento da linha: qtd * valor unitário
+        df_vendas['faturamento_calculado'] = df_vendas[INDICE_QTD] * df_vendas[INDICE_VALOR]
 
         # 3. Converte Data
         df_vendas['data_venda'] = pd.to_datetime(df_vendas[INDICE_DATA], format='%d/%m/%Y', errors='coerce')
@@ -57,11 +69,11 @@ def calcular_faturamento_atual(df_vendas):
 
         print(f"   ↳ Linhas mês atual: {mask_atual.sum()} | Linhas M-1: {mask_passado.sum()}")
 
-        # 5. Soma simples do valor por EAN (sem multiplicação)
-        df_atual = df_vendas[mask_atual].groupby(INDICE_EAN)[INDICE_VALOR].sum().reset_index()
+        # 5. Soma do faturamento calculado por EAN
+        df_atual = df_vendas[mask_atual].groupby(INDICE_EAN)['faturamento_calculado'].sum().reset_index()
         df_atual.columns = ['EAN', 'Faturamento Atual']
 
-        df_passado = df_vendas[mask_passado].groupby(INDICE_EAN)[INDICE_VALOR].sum().reset_index()
+        df_passado = df_vendas[mask_passado].groupby(INDICE_EAN)['faturamento_calculado'].sum().reset_index()
         df_passado.columns = ['EAN', 'Faturamento M-1']
 
         # 6. Merge final
